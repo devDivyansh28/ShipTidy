@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutIcon, GitBranch, GithubLogo, Gear } from "@phosphor-icons/react";
+import { LayoutIcon, GitBranch, GithubLogo, Gear , Book } from "@phosphor-icons/react";
 
 import {
   DASHBOARD_NAV_ITEMS,
@@ -20,6 +20,7 @@ import {
 const NAV_ICONS = {
   "layout-dashboard": LayoutIcon,
   "folder-git-2": GitBranch,
+  "repo": Book,
   github: GithubLogo,
   settings: Gear,
 } as const;
