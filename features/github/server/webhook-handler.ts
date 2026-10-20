@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getGithubApp } from "../utils/github-app";
 import { error } from "console";
 import { savePullRequest } from "@/features/reviews/server/save-pull-request";
+import { inngest } from "@/features/inngest/client";
 
 const REVIEWABLE_ACTIONS=["opened","synchronize","reopened"];
 
@@ -48,6 +49,11 @@ export async function handleGithubWebhook(request:Request){
     // Todo Map Github installation id
 
     // Background job of reviewing
+
+    await inngest.send({
+        name: "github/pr.received",
+        data: {pullRequestId: pullRequest.id},
+    })
 
     return Response.json({received: true});
 
