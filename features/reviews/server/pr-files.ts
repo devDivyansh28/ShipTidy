@@ -19,11 +19,11 @@ export async function getPullRequestFiles(
     prNumber: number
 ):Promise<PrFile[]>{
     const app =  getGithubApp();
-    const ocktokit = await app.getInstallationOctokit(installationId);
+    const octokit = await app.getInstallationOctokit(installationId);
 
     const [owner , repo]= repoFullName.split("/");
 
-    const {data} = await ocktokit.request(
+    const {data} = await octokit.request(
         "GET /repos/{owner}/{repo}/pulls/{pull_number}/files",
         {owner , repo , pull_number: prNumber , per_page: FILES_PER_PAGE}
     )
