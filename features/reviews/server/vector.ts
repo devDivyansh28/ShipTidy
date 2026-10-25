@@ -11,11 +11,17 @@ export async function saveChunksToPinecone(
   namespace: string,
   chunks: CodeChunk[],
 ) {
+  const validChunks = chunks.filter(
+    (chunk) => chunk.text && chunk.text.trim().length > 0,
+  );
+
+  if (validChunks.length === 0) {
+    return;
+  }
+
   const index = getPineconeIndex();
 
-  
-
-  const documents = chunks.map((chunk) => ({
+  const documents = validChunks.map((chunk) => ({
     _id: chunk.id,
     chunk_text: chunk.text,
     filePath: chunk.filePath,
@@ -26,21 +32,39 @@ export async function saveChunksToPinecone(
 }
 
 export async function searchPrContext(namespace: string, query: string) {
+  if (!query || !query.trim()) {
+    return [];
+  }
+
   const index = getPineconeIndex();
 
-  const response = await index.namespace(namespace).searchRecords({
-    query: { topK: CONTEXT_RESULTS, inputs: { text: query } },
+  const response = await index.namespace(namespace).documents.search({
+    scoreBy: [
+      {
+        type: "embed",
+        field: "chunk_text",
+        query: query.trim(),
+      },
+    ],
+    topK: CONTEXT_RESULTS,
+    includeFields: ["chunk_text", "filePath"],
   });
 
   const snippets: string[] = [];
 
-  for (const hit of response.result.hits) {
-    const fields = hit.fields as { text?: string; filePath?: string };
-    if (!fields.text) {
+  for (const match of response.matches ?? []) {
+    const text = (match.chunk_text ?? match.fields?.chunk_text) as
+      | string
+      | undefined;
+    const filePath = (match.filePath ?? match.fields?.filePath) as
+      | string
+      | undefined;
+
+    if (!text) {
       continue;
     }
 
-    snippets.push(`File: ${fields.filePath}\n${fields.text}`);
+    snippets.push(`File: ${filePath ?? "unknown"}\n${text}`);
   }
 
   return snippets;
