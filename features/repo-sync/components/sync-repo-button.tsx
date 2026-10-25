@@ -5,8 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { githubRepoKeys } from "@/features/github/lib/repos-query";
 import { syncRepoCodebase } from "../actions/repo-sync";
 import { Button } from "@/components/ui/button";
-import { RepoSyncStatus } from "../types/indes";
-import {toast} from "sonner";
+import { RepoSyncStatus } from "../types";
+import { toast } from "sonner";
 
 type SyncRepoButtonProps = {
   repoFullName: string;

@@ -1,5 +1,5 @@
 import { CodeChunk } from "@/features/reviews/types/review";
-import { RepoFile } from "../types/indes";
+import { RepoFile } from "../types";
 import { getGithubApp } from "@/features/github/utils/github-app";
 import { getPineconeIndex } from "@/features/pinecone/client";
 import { prisma } from "@/lib/db";
@@ -69,9 +69,15 @@ function isIndexableFile(entry: TreeEntry) {
     return false;
   }
 
+  if(entry.size===0){
+    return false;
+  }
+
   if (entry.size && entry.size > MAX_FILE_SIZE_BYTES) {
     return false;
   }
+
+
 
   if (isSkippedPath(entry.path)) {
     return false;
@@ -88,11 +94,19 @@ export function chunkRepoFiles(files: RepoFile[]): CodeChunk[] {
   const chunks: CodeChunk[] = [];
 
   for (const file of files) {
+
+    if(!file.content || !file.content.trim()){
+      continue;
+    }
     const lines = file.content.split("\n");
 
     for (let start = 0; start < lines.length; start += MAX_CHUNK_LINES) {
       const part = start / MAX_CHUNK_LINES;
       const text = lines.slice(start, start + MAX_CHUNK_LINES).join("\n");
+
+      if(!text.trim()){
+        continue;
+      }
 
       chunks.push({
         id: buildChunkId(file.filePath, part),
@@ -143,16 +157,25 @@ export async function deleteRepoNamespace(namespace: string) {
 export async function saveRepoChunks(namespace: string, chunks: CodeChunk[]) {
   const index = getPineconeIndex();
 
-  for (let start = 0; start < chunks.length; start += UPSERT_BATCH_SIZE) {
-    const batch = chunks.slice(start, start + UPSERT_BATCH_SIZE);
 
-    const records = batch.map((chunk) => ({
-      _id: chunk.id,
-      text: chunk.text ,
-      filePath: chunk.filePath,
+  const validChunks = chunks.filter(
+    (chunk) => chunk.text && chunk.text.trim().length > 0,
+  );
+
+  if(validChunks.length===0){
+    return;
+  }
+
+  for (let start = 0; start < validChunks.length; start += UPSERT_BATCH_SIZE) {
+    const batch = validChunks.slice(start, start + UPSERT_BATCH_SIZE);
+
+    const documents = batch.map((validChunks) => ({
+      _id: validChunks.id,
+      chunk_text: validChunks.text,
+      filePath: validChunks.filePath,
     }));
 
-    await index.namespace(namespace).upsertRecords({ records });
+    await index.namespace(namespace).documents.upsert({ documents });
   }
 }
 
