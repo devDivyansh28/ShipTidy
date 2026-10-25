@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const oxanium = Oxanium({subsets:['latin'],variable:'--font-sans'});
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,6 +50,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <Toaster position="top-right" richColors/>
           </ThemeProvider>
         </QueryProvider>
       </body>

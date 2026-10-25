@@ -1,5 +1,5 @@
 import { CodeChunk } from "@/features/reviews/types/review";
-import { RepoFile } from "../types/indes";
+import { RepoFile } from "../types";
 import { getGithubApp } from "@/features/github/utils/github-app";
 import { getPineconeIndex } from "@/features/pinecone/client";
 import { prisma } from "@/lib/db";
@@ -8,7 +8,8 @@ import { inngest } from "@/features/inngest/client";
 const MAX_FILE_SIZE_BYTES = 100_000;
 const MAX_FILES = 200;
 const MAX_CHUNK_LINES = 80;
-const UPSERT_BATCH_SIZE = 90;
+const UPSERT_BATCH_SIZE = 25;
+const STALE_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 const CODE_EXTENSIONS = [
   ".ts",
@@ -69,6 +70,10 @@ function isIndexableFile(entry: TreeEntry) {
     return false;
   }
 
+  if (entry.size === 0) {
+    return false;
+  }
+
   if (entry.size && entry.size > MAX_FILE_SIZE_BYTES) {
     return false;
   }
@@ -88,11 +93,18 @@ export function chunkRepoFiles(files: RepoFile[]): CodeChunk[] {
   const chunks: CodeChunk[] = [];
 
   for (const file of files) {
+    if (!file.content || !file.content.trim()) {
+      continue;
+    }
     const lines = file.content.split("\n");
 
     for (let start = 0; start < lines.length; start += MAX_CHUNK_LINES) {
       const part = start / MAX_CHUNK_LINES;
       const text = lines.slice(start, start + MAX_CHUNK_LINES).join("\n");
+
+      if (!text.trim()) {
+        continue;
+      }
 
       chunks.push({
         id: buildChunkId(file.filePath, part),
@@ -140,32 +152,97 @@ export async function deleteRepoNamespace(namespace: string) {
   await index.deleteNamespace(namespace);
 }
 
+async function upsertDocumentsWithBackoff(
+  index: ReturnType<typeof getPineconeIndex>,
+  namespace: string,
+  documents: Array<{ _id: string; chunk_text: string; filePath: string }>,
+  maxRetries = 3,
+  initialBackoffMs = 20000,
+) {
+  let backoffMs = initialBackoffMs;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await index.namespace(namespace).documents.upsert({ documents });
+      return;
+    } catch (error: any) {
+      const isRateLimited =
+        error?.status === 429 ||
+        error?.statusCode === 429 ||
+        error?.message?.includes("429") ||
+        error?.message?.includes("rate-limited") ||
+        error?.message?.includes("max tokens per minute");
+
+      if (isRateLimited && attempt < maxRetries) {
+        console.warn(
+          `[Pinecone] Rate limit 429 hit. Backing off for ${backoffMs / 1000}s (attempt ${attempt}/${maxRetries})...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        backoffMs *= 1.5;
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
 export async function saveRepoChunks(namespace: string, chunks: CodeChunk[]) {
   const index = getPineconeIndex();
 
-  for (let start = 0; start < chunks.length; start += UPSERT_BATCH_SIZE) {
-    const batch = chunks.slice(start, start + UPSERT_BATCH_SIZE);
+  const validChunks = chunks.filter(
+    (chunk) => chunk.text && chunk.text.trim().length > 0,
+  );
 
-    const records = batch.map((chunk) => ({
-      id: chunk.id,
-      text: chunk.text,
+  if (validChunks.length === 0) {
+    return;
+  }
+
+  for (let start = 0; start < validChunks.length; start += UPSERT_BATCH_SIZE) {
+    const batch = validChunks.slice(start, start + UPSERT_BATCH_SIZE);
+
+    const documents = batch.map((chunk) => ({
+      _id: chunk.id,
+      chunk_text: chunk.text,
       filePath: chunk.filePath,
     }));
 
-    await index.namespace(namespace).upsertRecords({ records });
+    await upsertDocumentsWithBackoff(index, namespace, documents);
+
+    // Pacing delay between batches to stay comfortably under token-per-minute limits
+    if (start + UPSERT_BATCH_SIZE < validChunks.length) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
   }
 }
 
 export async function getRepoSyncStatuses(repoFullNames: string[]) {
   const syncs = await prisma.repoSync.findMany({
     where: { repoFullName: { in: repoFullNames } },
-    select: { repoFullName: true, status: true },
+    select: { repoFullName: true, status: true, updateAt: true },
   });
 
   const statusByRepo: Record<string, string> = {};
+  const now = Date.now();
+  const staleRepoNames: string[] = [];
 
   for (const sync of syncs) {
-    statusByRepo[sync.repoFullName] = sync.status;
+    // If stuck in syncing/pending for > 5 minutes, self-heal to failed
+    if (
+      (sync.status === "syncing" || sync.status === "pending") &&
+      now - sync.updateAt.getTime() > STALE_SYNC_TIMEOUT_MS
+    ) {
+      statusByRepo[sync.repoFullName] = "failed";
+      staleRepoNames.push(sync.repoFullName);
+    } else {
+      statusByRepo[sync.repoFullName] = sync.status;
+    }
+  }
+
+  if (staleRepoNames.length > 0) {
+    await prisma.repoSync.updateMany({
+      where: { repoFullName: { in: staleRepoNames } },
+      data: { status: "failed" },
+    });
   }
 
   return statusByRepo;

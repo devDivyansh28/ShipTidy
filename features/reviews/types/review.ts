@@ -10,7 +10,7 @@ export type CodeChunk = {
   /** Source file path this chunk came from */
   filePath: string;
   /** Raw text stored in Pinecone and searched at review time */
-  text: string;
+  text: string ;
 };
 
 /**
