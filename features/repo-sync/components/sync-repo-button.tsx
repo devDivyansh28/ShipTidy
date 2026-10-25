@@ -16,6 +16,8 @@ type SyncRepoButtonProps = {
   syncStatus: RepoSyncStatus | null;
 };
 
+const MAX_WATCH_TIME_MS = 5 * 60 * 1000; // 5 minutes safety ceiling
+
 function isSyncing(status: RepoSyncStatus | null, mutationPending: boolean) {
   if (mutationPending) {
     return true;
@@ -71,7 +73,18 @@ const SyncRepoButton = ({
       return;
     }
 
+    const startTime = Date.now();
+
     const intervalId = setInterval(async () => {
+      // Safety timeout: stop polling if syncing takes longer than 5 minutes
+      if (Date.now() - startTime > MAX_WATCH_TIME_MS) {
+        clearInterval(intervalId);
+        toast.error(`Sync timed out for ${repoFullName}`);
+        queryClient.invalidateQueries({ queryKey: githubRepoKeys.all });
+        router.refresh();
+        return;
+      }
+
       try {
         const latestStatus = await getSingleRepoSyncStatus(repoFullName);
         if (
