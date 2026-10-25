@@ -147,8 +147,8 @@ export async function saveRepoChunks(namespace: string, chunks: CodeChunk[]) {
     const batch = chunks.slice(start, start + UPSERT_BATCH_SIZE);
 
     const records = batch.map((chunk) => ({
-      id: chunk.id,
-      text: chunk.text,
+      _id: chunk.id,
+      text: chunk.text ,
       filePath: chunk.filePath,
     }));
 

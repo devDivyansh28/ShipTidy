@@ -16,8 +16,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { githubReposInfiniteQuery } from "@/features/github/lib/repos-query";
-
-
+import { DashboardRepo } from "../lib/types";
+import { statusBadge } from "../lib/status-styles";
+import { LockIcon, LockKeyOpenIcon, StarIcon } from "@phosphor-icons/react";
+import SyncRepoButton from "@/features/repo-sync/components/sync-repo-button";
 
 type Filter = "all" | "public" | "private";
 
@@ -180,5 +182,52 @@ export function RepoList() {
         {footer}
       </div>
     </div>
+  );
+}
+
+
+
+function RepoRow({ repo }: { repo: DashboardRepo }) {
+  const tone = repo.visibility === "public" ? "info" : "warning";
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex flex-col">
+          <span className="font-medium">{repo.name}</span>
+          <span className="text-xs text-muted-foreground">{repo.fullName}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <span className={statusBadge(tone, "gap-1")}>
+          {repo.visibility === "private" ? (
+            <LockIcon className="size-3" />
+          ) : (
+            <LockKeyOpenIcon className="size-3" />
+          )}
+          {repo.visibility}
+        </span>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {repo.defaultBranch}
+      </TableCell>
+      <TableCell>{repo.language ?? "—"}</TableCell>
+      <TableCell className="text-right">
+        <span className="inline-flex items-center justify-end gap-1 text-muted-foreground">
+          <StarIcon className="size-3 text-amber-500" />
+          {repo.stars}
+        </span>
+      </TableCell>
+      <TableCell className="text-right text-muted-foreground">
+        {formatDistanceToNow(new Date(repo.updatedAt), { addSuffix: true })}
+      </TableCell>
+      <TableCell className="text-right">
+        <SyncRepoButton
+          repoFullName={repo.fullName}
+          branch={repo.defaultBranch}
+          syncStatus={repo.syncStatus ?? null}
+        />
+      </TableCell>
+    </TableRow>
   );
 }
