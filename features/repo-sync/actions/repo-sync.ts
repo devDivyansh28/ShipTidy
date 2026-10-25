@@ -1,24 +1,32 @@
-"use server"
-import {redirect} from "next/navigation";
-import {getServerSession} from "../../auth/actions";
+"use server";
 
+import { redirect } from "next/navigation";
+import { getServerSession } from "../../auth/actions";
 import { getUserInstallationId } from "../../github/server/installation";
 import { DASHBOARD_ROUTES } from "../../dashboard/lib/routes";
 import { triggerRepoSync } from "../server/repo-sync";
+import { prisma } from "@/lib/db";
 
+export async function syncRepoCodebase(repoFullName: string, branch: string) {
+  const session = await getServerSession();
 
-export async function syncRepoCodebase(repoFullName:string , branch: string) {
-    const session = await getServerSession();
+  if (!session) {
+    redirect("./sign-in");
+  }
 
-    if(!session){
-        redirect("./sign-in");
-    }
-    
-    const installationId = await getUserInstallationId(session.user.id);
+  const installationId = await getUserInstallationId(session.user.id);
 
-    if(!installationId){
-        redirect(DASHBOARD_ROUTES.github)
-    }
+  if (!installationId) {
+    redirect(DASHBOARD_ROUTES.github);
+  }
 
-    await triggerRepoSync(installationId , repoFullName , branch);
+  await triggerRepoSync(installationId, repoFullName, branch);
+}
+
+export async function getSingleRepoSyncStatus(repoFullName: string) {
+  const sync = await prisma.repoSync.findUnique({
+    where: { repoFullName },
+    select: { status: true },
+  });
+  return sync?.status ?? null;
 }
