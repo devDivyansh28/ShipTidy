@@ -9,22 +9,6 @@ import { prisma } from "@/lib/db";
 
 const STALE_SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function syncRepoCodebase(repoFullName: string, branch: string) {
-  const session = await getServerSession();
-
-  if (!session) {
-    redirect("./sign-in");
-  }
-
-  const installationId = await getUserInstallationId(session.user.id);
-
-  if (!installationId) {
-    redirect(DASHBOARD_ROUTES.github);
-  }
-
-  await triggerRepoSync(installationId, repoFullName, branch);
-}
-
 export async function getSingleRepoSyncStatus(repoFullName: string) {
   const sync = await prisma.repoSync.findUnique({
     where: { repoFullName },
@@ -48,4 +32,20 @@ export async function getSingleRepoSyncStatus(repoFullName: string) {
   }
 
   return sync.status;
+}
+
+export async function syncRepoCodebase(repoFullName: string, branch: string) {
+  const session = await getServerSession();
+
+  if (!session) {
+    redirect("./sign-in");
+  }
+
+  const installationId = await getUserInstallationId(session.user.id);
+
+  if (!installationId) {
+    redirect(DASHBOARD_ROUTES.github);
+  }
+
+  await triggerRepoSync(installationId, repoFullName, branch);
 }
