@@ -4,6 +4,9 @@ import { getGithubApp } from "../utils/github-app";
 import { error } from "console";
 import { savePullRequest } from "@/features/reviews/server/save-pull-request";
 import { inngest } from "@/features/inngest/client";
+import { getUserIdByInstallationId } from "./installation";
+import { canUserReview } from "@/features/billing/server/usage";
+import { prisma } from "@/lib/db";
 
 const REVIEWABLE_ACTIONS=["opened","synchronize","reopened"];
 
@@ -49,6 +52,23 @@ export async function handleGithubWebhook(request:Request){
     // Todo Map Github installation id
 
     // Background job of reviewing
+    const userId = await getUserIdByInstallationId(event.installation.id);
+
+    if(userId){
+        const allowed = await canUserReview(userId);
+        if(!allowed){
+            await prisma.pullRequest.update({
+                where:{
+                    id: pullRequest.id
+                },
+                data: {
+                    status: "rate_limited"
+                }
+            })
+
+            return Response.json({received: true , rateLimited: true});
+        }
+    }
 
     await inngest.send({
         name: "github/pr.received",
@@ -56,7 +76,6 @@ export async function handleGithubWebhook(request:Request){
     })
 
     return Response.json({received: true});
-
 
 }
 
