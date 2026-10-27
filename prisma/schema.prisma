@@ -23,7 +23,11 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  plan   String @default("free") // free | pro
   createdAt     DateTime  @default(now())
+  razorpaySubscriptionId String?
+  subscriptionStatus String? // active / canceled / trialing
+  subscriptionRenewsAt DateTime? 
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
@@ -128,3 +132,4 @@ model RepoSync{
   @@unique([repoFullName])
   @@map("repo_sync")
 }
+
