@@ -1,12 +1,11 @@
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import { UserMenu, UserMenuWithSession } from "@/features/auth/components/user-menu";
-import Image from "next/image";
+import { LandingPageContent } from "@/features/landing/components/landing-page-content";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      Welcome to DashBoard jiiii...
-      <UserMenuWithSession variant="compact"/>
-    </div>
-  );
+export const metadata = {
+  title: "ShipTidy — AI Code Reviewer for GitHub Pull Requests",
+  description:
+    "Automated, context-aware AI reviews for every pull request on your GitHub repositories. Catch bugs, enforce best practices, and ship code faster.",
+};
+
+export default function HomePage() {
+  return <LandingPageContent />;
 }
