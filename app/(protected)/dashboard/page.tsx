@@ -1,11 +1,6 @@
-import React from 'react'
+import { redirect } from "next/navigation";
+import { DASHBOARD_ROUTES } from "@/features/dashboard/lib/routes";
 
-const Dashboard = () => {
-  return (
-    <div>
-      Dashboard
-    </div>
-  )
+export default function DashboardRootPage() {
+  redirect(DASHBOARD_ROUTES.overview);
 }
-
-export default Dashboard
