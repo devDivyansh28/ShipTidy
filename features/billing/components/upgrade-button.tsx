@@ -28,6 +28,7 @@ export function UpgradeButton() {
 
   async function handleUpgrade() {
     const key = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    console.log("*******Razorpay key id********", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
     if (!key) {
       toast.error("Razorpay is not configured yet.");
       return;
@@ -49,6 +50,7 @@ export function UpgradeButton() {
         name: "ShipTidy Review you PR",
         description: "Pro plan — unlimited AI reviews",
         handler: () => {
+
           toast.success(
             "Payment successful! Your Pro plan will activate shortly.",
           );
@@ -57,6 +59,12 @@ export function UpgradeButton() {
       });
 
       checkout.open();
+      
+//        checkout.on("payment.failed", (res: any) => {
+//   console.error("Razorpay Payment Failed:", res.error);
+//   toast.error(res.error?.description || "Payment could not be completed.");
+//  });
+     
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not start checkout.";
