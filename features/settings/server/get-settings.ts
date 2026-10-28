@@ -7,11 +7,10 @@
  * @module features/settings/server/get-settings
  */
 
-import type { UserSettings } from "@/features/settings/types/settings";
+import type { UserSettings } from "@/features/settings/types";
+import { getUserSubscription } from "@/features/billing/server/subscription";
 import { getUsageSummary } from "@/features/billing/server/usage";
 import { prisma } from "@/lib/db";
-
-import { getUserSubscription } from "./subscription";
 
 /**
  * Fetches profile, subscription, and usage for the settings screen.
