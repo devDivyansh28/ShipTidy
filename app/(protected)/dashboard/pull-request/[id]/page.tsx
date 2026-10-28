@@ -16,7 +16,7 @@ import {
   GitBranchIcon,
   GitPullRequestIcon,
   UserIcon,
-} from "@phosphor-icons/react";
+} from "@phosphor-icons/react/dist/ssr";
 
 import { DashboardHeader } from "@/features/dashboard/components/dashboard-header";
 import { DASHBOARD_ROUTES } from "@/features/dashboard/lib/routes";
