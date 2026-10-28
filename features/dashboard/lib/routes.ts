@@ -1,5 +1,5 @@
 export const DASHBOARD_ROUTES = {
-  overview: "/dashboard",
+  overview: "/dashboard/overview",
   repos: "/dashboard/repos",
   pullRequest: "/dashboard/pull-request",
   github: "/dashboard/github",

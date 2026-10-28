@@ -26,8 +26,8 @@ const NAV_ICONS = {
 } as const;
 
 function isNavActive(pathname: string, href: DashboardRoute) {
-  if (href === "/dashboard") {
-    return pathname === href;
+  if (href === "/dashboard/overview") {
+    return pathname === "/dashboard/overview" || pathname === "/dashboard";
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
