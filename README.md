@@ -112,7 +112,7 @@ npx inngest-cli@latest dev
 
 Set `INNGEST_DEV=1` in your `.env` when using the local Inngest dev server.
 
-Open *********************, sign in with GitHub, connect the GitHub App, and open a pull request on a connected repository to trigger your first AI review.
+Open https://ship-tidy.vercel.app , sign in with GitHub, connect the GitHub App, and open a pull request on a connected repository to trigger your first AI review.
 
 ## Project Structure
 
